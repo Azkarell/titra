@@ -1,4 +1,4 @@
-use crate::{state::AppState, TitraView};
+use crate::TitraView;
 
 use super::{failed::Failed, loading::Loading};
 

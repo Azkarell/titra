@@ -1,13 +1,8 @@
 use std::{
     path::PathBuf,
-    sync::{
-        mpsc::{self, Receiver, SyncSender},
-        Arc, Mutex,
-    },
-    thread::{spawn, JoinHandle, Thread},
+    thread::{spawn, JoinHandle},
 };
 
-use chrono::{Local, TimeZone, Utc};
 use eframe::App;
 use egui::Ui;
 use serde::{Deserialize, Serialize};
@@ -15,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     state::AppState,
     storage::{sqlite::SqliteStorage, DataStorageError, StorageImplementation, TimeStorage},
-    views::{loading::Loading, overview::Overview, scaffold::Scaffold},
+    views::{overview::Overview, scaffold::Scaffold},
 };
 
 pub trait TitraView {
@@ -90,6 +85,7 @@ impl App for Titra {
 fn init(config: TitraConfig) -> Result<Box<dyn TimeStorage + Send>, DataStorageError>{
     match config.storage_impl {
         StorageImplementation::Sqlite => {
+            
             match SqliteStorage::new(config.root_dir.clone()) {
                 Ok(res) => return Ok(Box::new(res)),
                 Err(err) => return Err(err),

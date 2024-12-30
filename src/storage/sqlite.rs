@@ -1,10 +1,9 @@
 use std::path::PathBuf;
 
 use chrono::Local;
-use log::info;
+use log::{debug, info};
 use rusqlite::{Connection, OpenFlags, ToSql};
 
-use crate::TitraConfig;
 
 use super::{DataStorageError, TimeEntry, TimeEntryData, TimeStorage};
 
@@ -22,15 +21,20 @@ pub struct SqliteStorage {
 
 impl SqliteStorage {
     pub fn new(root_dir: PathBuf) -> Result<Self,DataStorageError> {
-        info!("Create sqlite storage");
-        let connection = Connection::open_with_flags(root_dir.clone().join("./db.sqlite"), OpenFlags::SQLITE_OPEN_CREATE)?;
-        info!("Create table");
-        connection.execute("CREATE TABLE times (
+        debug!("Create sqlite storage");
+        let path = std::path::absolute(root_dir.clone().join("db.sqlite")).expect("get path");
+        debug!("Path: {:?}", path);
+        let connection = Connection::open(path)?;
+        debug!("Create table");
+        let res = connection.execute("CREATE TABLE times (
                                     id      INTEGER PRIMARY KEY,
                                     start   TEXT NOT NULL,
                                     end     TEXT NOT NULL,
                                     remark  TEXT
-                                    )", ())?;   
+                                    )", ());   
+                                if let Err(err) = res {
+                                    debug!("Error: {}", err.to_string());
+                                }
         Ok(Self { root_dir, connection })
     }
 }
@@ -38,7 +42,7 @@ impl SqliteStorage {
 impl TimeStorage for SqliteStorage {
     fn add_entry(&mut self, entry: TimeEntryData) -> Result<super::TimeEntryId, DataStorageError> {
         
-        let mut statment = self.connection.prepare("insert into times (start, end, remark) values (?1, ?2, ?3) returning id")?;
+        let mut statment = self.connection.prepare("insert into times (start, end, remark) values (?1, ?2, ?3)")?;
         let res = statment.insert((&entry.start.to_sql().unwrap(), &entry.end.to_sql().unwrap(), &entry.remark))?;
 
         Ok(res)

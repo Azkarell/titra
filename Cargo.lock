@@ -870,6 +870,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "dotenv"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
+
+[[package]]
 name = "downcast-rs"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1522,6 +1528,12 @@ checksum = "f31827a206f56af32e590ba56d5d2d085f558508192593743f16b2306495269f"
 dependencies = [
  "cc",
 ]
+
+[[package]]
+name = "icu4x"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "69db64f70a0386f6f1752d2a5bdd5f89ff3b4555991d8f9c85f4bf73ab94cb1d"
 
 [[package]]
 name = "icu_collections"
@@ -2842,9 +2854,11 @@ name = "timetracker"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "dotenv",
  "eframe",
  "egui",
  "env_logger",
+ "icu4x",
  "log",
  "rusqlite",
  "rust_xlsxwriter",
