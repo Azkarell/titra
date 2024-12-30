@@ -13,9 +13,9 @@ pub enum StorageImplementation {
 pub type TimeEntryId = i64;
 
 pub struct TimeEntryData {
-    start: DateTime<Local>,
-    end: DateTime<Local>,
-    remark: Option<String>
+    pub start: DateTime<Local>,
+    pub end: DateTime<Local>,
+    pub remark: Option<String>
 }
 
 pub type TimeEntry = (TimeEntryId, TimeEntryData);

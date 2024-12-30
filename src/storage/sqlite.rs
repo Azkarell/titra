@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 
-use chrono::Local;
-use log::{debug, info};
-use rusqlite::{Connection, OpenFlags, ToSql};
-
+use chrono::{DateTime, Local};
+use log::debug;
+use rusqlite::{types::FromSql, Connection, ToSql};
+use fallible_iterator::FallibleIterator;
 
 use super::{DataStorageError, TimeEntry, TimeEntryData, TimeStorage};
 
@@ -53,7 +53,15 @@ impl TimeStorage for SqliteStorage {
     }
 
     fn get_in_range(&self, start: chrono::DateTime<Local>, end: chrono::DateTime<Local>) -> Result<Vec<TimeEntry>, DataStorageError> {
-        todo!()
+        let mut statement = self.connection.prepare("SELECT id, start, end, remark from times where datetime(start) >= ?1 and datetime(end) <= ?2")?;
+        let res = statement.query((start.to_sql()?, end.to_sql()?))?;
+
+        let mapped = res.map(|e| Ok((e.get(0)?, TimeEntryData{
+            end: e.get(2)?,
+            start: e.get(1)?,
+            remark: e.get(3)?
+        })));
+        Ok(mapped.collect()?)
     }
 }
 
