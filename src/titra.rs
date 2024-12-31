@@ -4,12 +4,12 @@ use std::{
 };
 
 use eframe::App;
-use egui::Ui;
+use egui::{ Ui};
 use serde::{Deserialize, Serialize};
 
 use crate::{
     state::AppState,
-    storage::{sqlite::SqliteStorage, DataStorageError, StorageImplementation, TimeStorage},
+    storage::{cache::CachedStorage, sqlite::SqliteStorage, DataStorageError, StorageImplementation, TimeStorage},
     views::{overview::Overview, scaffold::Scaffold},
 };
 
@@ -87,7 +87,7 @@ fn init(config: TitraConfig) -> Result<Box<dyn TimeStorage + Send>, DataStorageE
         StorageImplementation::Sqlite => {
             
             match SqliteStorage::new(config.root_dir.clone()) {
-                Ok(res) => return Ok(Box::new(res)),
+                Ok(res) => return Ok(Box::new(CachedStorage::new(res))),
                 Err(err) => return Err(err),
             }
         }

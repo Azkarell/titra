@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 
-use chrono::{DateTime, Local};
-use log::debug;
-use rusqlite::{types::FromSql, Connection, ToSql};
+use chrono::Local;
+use log::{debug, info};
+use rusqlite::{Connection, Statement, ToSql};
 use fallible_iterator::FallibleIterator;
 
 use super::{DataStorageError, TimeEntry, TimeEntryData, TimeStorage};
@@ -39,9 +39,16 @@ impl SqliteStorage {
     }
 }
 
+impl Clone for SqliteStorage {
+    fn clone(&self) -> Self {
+        Self::new(self.root_dir.clone()).unwrap()
+    }
+}
+
 impl TimeStorage for SqliteStorage {
     fn add_entry(&mut self, entry: TimeEntryData) -> Result<super::TimeEntryId, DataStorageError> {
         
+        debug!("Inserting: {:?}", entry);
         let mut statment = self.connection.prepare("insert into times (start, end, remark) values (?1, ?2, ?3)")?;
         let res = statment.insert((&entry.start.to_sql().unwrap(), &entry.end.to_sql().unwrap(), &entry.remark))?;
 
@@ -49,11 +56,15 @@ impl TimeStorage for SqliteStorage {
     }
 
     fn remove_entry(&mut self, entry_id: super::TimeEntryId) -> Result<(), DataStorageError> {
-        todo!()
+        debug!("Deleting entry: {}", entry_id);
+        let mut statement = self.connection.prepare("Delete from times where id = ?1")?;
+        let res = statement.execute([entry_id])?;
+        Ok(())
     }
 
     fn get_in_range(&self, start: chrono::DateTime<Local>, end: chrono::DateTime<Local>) -> Result<Vec<TimeEntry>, DataStorageError> {
-        let mut statement = self.connection.prepare("SELECT id, start, end, remark from times where datetime(start) >= ?1 and datetime(end) <= ?2")?;
+        debug!("query data");
+        let mut statement = self.connection.prepare("SELECT id, start, end, remark from times where datetime(start) >= ?1 and datetime(end) <= ?2 order by start asc")?;
         let res = statement.query((start.to_sql()?, end.to_sql()?))?;
 
         let mapped = res.map(|e| Ok((e.get(0)?, TimeEntryData{
@@ -62,6 +73,10 @@ impl TimeStorage for SqliteStorage {
             remark: e.get(3)?
         })));
         Ok(mapped.collect()?)
+    }
+    
+    fn dyn_clone(&self) -> Box<dyn TimeStorage + Send> {
+        Box::new(self.clone())
     }
 }
 
