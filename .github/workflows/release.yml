@@ -1,0 +1,31 @@
+name: Release
+on:
+  release:
+    types: [created]
+
+jobs:
+  release-ubuntu:
+    name: release ubuntu
+    runs-on: ubuntu-latest
+    permissions: write-all
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+    - uses: actions/checkout@v4
+    - name: Build
+      run: cargo build --verbose --release --target-dir ./out
+    
+    - run: gh release upload ${{ github.ref_name }} ./out/release/timetracker
+
+  release-windows:
+    name: release windows
+    runs-on: windows-latest
+    permissions: write-all
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+    - uses: actions/checkout@v4
+    - name: Build
+      run: cargo build --verbose --release --target-dir ./out
+
+    - run: gh release upload ${{ github.ref_name }} ./out/release/timetracker.exe ./out/release/timetracker.pdb
