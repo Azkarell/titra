@@ -13,41 +13,9 @@ jobs:
     - uses: actions/checkout@v4
     - name: Build
       run: cargo build --verbose --release --target-dir ./out
+    
+    - run: gh release upload $GITHUB_REF ./out/release/timetracker
 
-    - uses: softprops/action-gh-release@v2.2.0
-      with:
-        # Note-worthy description of changes in release
-        #body: # optional
-        # Path to load note-worthy description of changes in release from
-        #body_path: # optional
-        # Gives the release a custom name. Defaults to tag name
-        #name: # optional
-        # Gives a tag name. Defaults to github.GITHUB_REF
-        #tag_name: # optional
-        # Creates a draft release. Defaults to false
-        #draft: # optional
-        # Identify the release as a prerelease. Defaults to false
-        #prerelease: # optional
-        # Preserver the order of the artifacts when uploading
-        # preserve_order: # optional
-        # Newline-delimited list of path globs for asset files to upload
-        files: ./out/release/timetracker*
-        # Fails if any of the `files` globs match nothing. Defaults to false
-        fail_on_unmatched_files: true
-        # Repository to make releases against, in <owner>/<repo> format
-        #repository: # optional
-        # Authorized secret GitHub Personal Access Token. Defaults to github.token
-        #token: # optional, default is ${{ github.token }}
-        # Commitish value that determines where the Git tag is created from. Can be any branch or commit SHA.
-        #target_commitish: # optional
-        # If specified, a discussion of the specified category is created and linked to the release. The value must be a category that already exists in the repository. If there is already a discussion linked to the release, this parameter is ignored.
-        #discussion_category_name: # optional
-        # Whether to automatically generate the name and body for this release. If name is specified, the specified name will be used; otherwise, a name will be automatically generated. If body is specified, the body will be pre-pended to the automatically generated notes.
-        generate_release_notes: true
-        # Append to existing body instead of overwriting it. Default is false.
-        #append_body: # optional
-        # Specifies whether this release should be set as the latest release for the repository. Drafts and prereleases cannot be set as latest. Can be `true`, `false`, or `legacy`. Uses GitHub api default if not provided
-        #make_latest: # optional
   release-windows:
     name: release windows
     runs-on: windows-latest
@@ -58,37 +26,4 @@ jobs:
     - name: Build
       run: cargo build --verbose --release --target-dir ./out
 
-    - uses: softprops/action-gh-release@v2.2.0
-      with:
-        # Note-worthy description of changes in release
-        #body: # optional
-        # Path to load note-worthy description of changes in release from
-        #body_path: # optional
-        # Gives the release a custom name. Defaults to tag name
-        #name: # optional
-        # Gives a tag name. Defaults to github.GITHUB_REF
-        #tag_name: # optional
-        # Creates a draft release. Defaults to false
-        #draft: # optional
-        # Identify the release as a prerelease. Defaults to false
-        #prerelease: # optional
-        # Preserver the order of the artifacts when uploading
-        # preserve_order: # optional
-        # Newline-delimited list of path globs for asset files to upload
-        files: ./out/release/timetracker*
-        # Fails if any of the `files` globs match nothing. Defaults to false
-        fail_on_unmatched_files: true
-        # Repository to make releases against, in <owner>/<repo> format
-        #repository: # optional
-        # Authorized secret GitHub Personal Access Token. Defaults to github.token
-        #token: # optional, default is ${{ github.token }}
-        # Commitish value that determines where the Git tag is created from. Can be any branch or commit SHA.
-        #target_commitish: # optional
-        # If specified, a discussion of the specified category is created and linked to the release. The value must be a category that already exists in the repository. If there is already a discussion linked to the release, this parameter is ignored.
-        #discussion_category_name: # optional
-        # Whether to automatically generate the name and body for this release. If name is specified, the specified name will be used; otherwise, a name will be automatically generated. If body is specified, the body will be pre-pended to the automatically generated notes.
-        generate_release_notes: true
-        # Append to existing body instead of overwriting it. Default is false.
-        #append_body: # optional
-        # Specifies whether this release should be set as the latest release for the repository. Drafts and prereleases cannot be set as latest. Can be `true`, `false`, or `legacy`. Uses GitHub api default if not provided
-        #make_latest: # optional
+    - run: gh release upload $GITHUB_REF ./out/release/timetracker.exe ./out/release/timetracker.pdb
