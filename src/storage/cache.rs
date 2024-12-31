@@ -103,11 +103,8 @@ impl<S: TimeStorage> CachedStorage<S> {
         start: chrono::DateTime<chrono::Local>,
         end: chrono::DateTime<chrono::Local>,
     ) -> Result<Vec<super::TimeEntry>, super::DataStorageError> {
-        let res = self.imp.get_in_range(start, end);
-        if res.is_err() {
-            return res;
-        }
-        self.last_query.set_result((start, end), res.clone());
-        res
+        let res = self.imp.get_in_range(start, end)?;
+        self.last_query.set_result((start, end), Ok(res.clone()));
+        Ok(res)
     }
 }
