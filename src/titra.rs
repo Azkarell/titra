@@ -3,16 +3,35 @@ use std::{
     thread::{spawn, JoinHandle},
 };
 
+use chrono::ParseError;
 use eframe::App;
 use egui::{ Ui};
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 use crate::{
-    state::AppState,
-    storage::{cache::CachedStorage, sqlite::SqliteStorage, DataStorageError, StorageImplementation, TimeStorage},
-    views::{overview::Overview, scaffold::Scaffold},
+    export::ExportError, state::AppState, storage::{cache::CachedStorage, sqlite::SqliteStorage, DataStorageError, StorageImplementation, TimeStorage}, views::{overview::Overview, scaffold::Scaffold}
 };
 
+#[derive(Debug, Error)]
+pub enum ApplicationError {
+    #[error("Storage failure: {0}")]
+    Storage(DataStorageError),
+    #[error("Export failure: {0}")]
+    Export(ExportError),
+    #[error("Chrono error: {0}")]
+    ChronoParseError(ParseError),
+    #[error("Chrono timezone error: {0}")]
+    ChronoeTimezoneError(String),
+    #[error("Ungülitige start und endzeit")]
+    InvalidRange,
+}
+
+impl From<ParseError> for ApplicationError {
+    fn from(value: ParseError) -> Self {
+        ApplicationError::ChronoParseError(value)
+    }
+}
 pub trait TitraView {
     fn show(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame, ui: &mut Ui);
 }

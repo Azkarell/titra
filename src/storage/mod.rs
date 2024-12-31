@@ -1,6 +1,8 @@
-use chrono::{DateTime, Local};
+use chrono::{DateTime, Local, NaiveDate, NaiveTime};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+
+use crate::views::overview_table::DateRange;
 
 
 pub mod sqlite;
@@ -15,8 +17,9 @@ pub type TimeEntryId = i64;
 
 #[derive(Debug, Clone)]
 pub struct TimeEntryData {
-    pub start: DateTime<Local>,
-    pub end: DateTime<Local>,
+    pub start: NaiveTime,
+    pub end: NaiveTime,
+    pub date: NaiveDate,
     pub remark: Option<String>
 }
 
@@ -32,7 +35,7 @@ pub trait TimeStorage {
     fn add_entry(&mut self, entry: TimeEntryData) -> Result<TimeEntryId, DataStorageError>;
     fn remove_entry(&mut self, entry_id: TimeEntryId) -> Result<(), DataStorageError>;
 
-    fn get_in_range(&self, start: chrono::DateTime<Local>, end: chrono::DateTime<Local>) -> Result<Vec<TimeEntry>, DataStorageError>;
+    fn get_in_range(&self, range: DateRange) -> Result<Vec<TimeEntry>, DataStorageError>;
     fn dyn_clone(&self) -> Box<dyn TimeStorage + Send>;
 }
 

@@ -3,11 +3,13 @@ use std::sync::Arc;
 use chrono::{DateTime, Local};
 use egui::mutex::RwLock;
 
+use crate::views::overview_table::DateRange;
+
 use super::{DataStorageError, TimeEntry, TimeStorage};
 
 #[derive(Clone)]
 pub struct SharedQueryResult {
-    last_query: Arc<RwLock<Option<(DateTime<Local>, DateTime<Local>)>>>,
+    last_query: Arc<RwLock<Option<DateRange>>>,
     last_result: Arc<RwLock<Option<Result<Vec<TimeEntry>, DataStorageError>>>>,
 }
 
@@ -24,7 +26,7 @@ impl SharedQueryResult {
     }
     pub fn set_result(
         &self,
-        query: (DateTime<Local>, DateTime<Local>),
+        query: DateRange,
         result: Result<Vec<TimeEntry>, DataStorageError>,
     ) {
         let mut g = self.last_query.write();
@@ -35,7 +37,7 @@ impl SharedQueryResult {
 
     pub fn get_cached(
         &self,
-        query: (DateTime<Local>, DateTime<Local>),
+        query: DateRange,
     ) -> Option<Result<Vec<TimeEntry>, DataStorageError>> {
         let r = self.last_query.read();
         if let Some((start, end)) = *r {
@@ -72,14 +74,13 @@ impl<S: TimeStorage + Clone + Send + 'static> TimeStorage for CachedStorage<S> {
 
     fn get_in_range(
         &self,
-        start: chrono::DateTime<chrono::Local>,
-        end: chrono::DateTime<chrono::Local>,
+        range: DateRange
     ) -> Result<Vec<super::TimeEntry>, super::DataStorageError> {
-        let cached = self.last_query.get_cached((start, end));
+        let cached = self.last_query.get_cached(range);
         if let Some(val) = cached {
             return val;
         }
-        self.do_query(start, end)
+        self.do_query(range)
     }
 
     fn dyn_clone(&self) -> Box<dyn TimeStorage + Send> {
@@ -100,11 +101,10 @@ impl<S: TimeStorage> CachedStorage<S> {
 
     pub fn do_query(
         &self,
-        start: chrono::DateTime<chrono::Local>,
-        end: chrono::DateTime<chrono::Local>,
+        range: DateRange
     ) -> Result<Vec<super::TimeEntry>, super::DataStorageError> {
-        let res = self.imp.get_in_range(start, end)?;
-        self.last_query.set_result((start, end), Ok(res.clone()));
+        let res = self.imp.get_in_range(range)?;
+        self.last_query.set_result(range ,Ok(res.clone()));
         Ok(res)
     }
 }

@@ -6,76 +6,39 @@ use log::warn;
 use thiserror::Error;
 
 use crate::{
-    export::ExportError,
-    storage::{DataStorageError, TimeEntryData, TimeStorage},
-    TitraView,
+    export::ExportError, storage::{DataStorageError, TimeEntryData, TimeStorage}, ApplicationError, TitraView
 };
+
+use super::time_edit::TimeEdit;
 
 pub struct AddEntry {
     date: NaiveDate,
-    start: String,
-    end: String,
+    start: TimeEdit,
+    end: TimeEdit,
     remark: String,
     storage: Box<dyn TimeStorage + Send>,
 }
 
-#[derive(Debug, Error)]
-pub enum ApplicationError {
-    #[error("Storage failure: {0}")]
-    Storage(DataStorageError),
-    #[error("Export failure: {0}")]
-    Export(ExportError),
-    #[error("Chrono error: {0}")]
-    ChronoParseError(ParseError),
-    #[error("Chrono timezone error: {0}")]
-    ChronoeTimezoneError(String),
-    #[error("Ungülitige start und endzeit")]
-    InvalidRange,
-}
 
-impl From<ParseError> for ApplicationError {
-    fn from(value: ParseError) -> Self {
-        ApplicationError::ChronoParseError(value)
-    }
-}
+
+
 
 impl AddEntry {
     pub fn new(storage: Box<dyn TimeStorage + Send>) -> Self {
         Self {
             date: Local::now().date_naive(),
-            start: "00:00".to_owned(),
-            end: "00:00".to_owned(),
+            start: TimeEdit::new("Start".to_owned()),
+            end: TimeEdit::new("Ende".to_owned()),
             remark: "".to_owned(),
             storage,
         }
     }
 
     pub fn validate(&self) -> Result<TimeEntryData, ApplicationError> {
-        let start = self
-            .date
-            .and_time(NaiveTime::parse_from_str(&self.start, "%R")?)
-            .and_local_timezone(Local)
-            .single();
 
-        if start.is_none() {
-            return Err(ApplicationError::ChronoeTimezoneError(
-                "Startzeit konnte nicht gelesen werden".to_owned(),
-            ));
-        }
-
-        let end = self
-            .date
-            .and_time(NaiveTime::parse_from_str(&self.end, "%R")?)
-            .and_local_timezone(Local)
-            .single();
-        if end.is_none() {
-            return Err(ApplicationError::ChronoeTimezoneError(
-                "Endzeit konnte nicht gelesen werden".to_owned(),
-            ));
-        }
-
-        let start = start.unwrap();
-        let end = end.unwrap();
+        let start = self.start.validate()?;
+        let end = self.end.validate()?;
+         
         if end <= start {
             return Err(ApplicationError::InvalidRange);
         }
@@ -83,6 +46,7 @@ impl AddEntry {
         Ok(TimeEntryData {
             start,
             end,
+            date: self.date.clone(),
             remark: if !self.remark.is_empty() {
                 Some(self.remark.clone())
             } else {
@@ -100,11 +64,8 @@ impl TitraView for AddEntry {
                 let dpb = DatePickerButton::new(&mut self.date).id_salt("add_date");
                 ui.add(dpb);
 
-                ui.label("Startzeit: ");
-                ui.text_edit_singleline(&mut self.start);
-
-                ui.label("Endzeit");
-                ui.text_edit_singleline(&mut self.end);
+                self.start.show(ctx, frame, ui);
+                self.end.show(ctx, frame, ui);
 
                 ui.label("Bemerkung");
                 ui.text_edit_singleline(&mut self.remark);

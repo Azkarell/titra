@@ -10,6 +10,8 @@ use crate::{
     TitraView,
 };
 
+use super::overview_table::DateRange;
+
 #[derive(Debug, PartialEq, PartialOrd)]
 pub enum ExportFormat {
     Csv,
@@ -35,7 +37,7 @@ impl ExportFormat {
 pub struct Export {
     storage: Box<dyn TimeStorage + Send>,
     export_format: ExportFormat,
-    range: (DateTime<Local>, DateTime<Local>),
+    range: DateRange,
     user_data: UserData,
     current_export: Option<JoinHandle<()>>,
 }
@@ -43,7 +45,7 @@ pub struct Export {
 impl Export {
     pub fn new(
         storage: Box<dyn TimeStorage + Send>,
-        range: (DateTime<Local>, DateTime<Local>),
+        range: DateRange,
         user_data: UserData,
     ) -> Self {
         Self {
@@ -55,7 +57,7 @@ impl Export {
         }
     }
 
-    pub fn set_range(&mut self, range: (DateTime<Local>, DateTime<Local>)) {
+    pub fn set_range(&mut self, range: DateRange) {
         self.range = range;
     }
 
@@ -65,7 +67,7 @@ impl Export {
         let exporter = self.export_format.get_exporter();
         let range = (self.range.0, self.range.1);
         let handle = spawn(move || {
-            let data = clone.get_in_range(range.0, range.1);
+            let data = clone.get_in_range(range);
             if data.is_err() {
                 return;
             }

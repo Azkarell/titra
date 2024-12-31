@@ -72,12 +72,14 @@ impl Overview {
 impl TitraView for Overview {
     fn show(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame, ui: &mut egui::Ui) {
             self.select_date_range.show(ctx, frame, ui);
-            self.overview_table.set_range((self.select_date_range.start_date, self.select_date_range.end_date));
+            if self.select_date_range.is_valid() {
+                self.overview_table.set_range((self.select_date_range.start_date, self.select_date_range.end_date));
+                self.export.set_range((self.select_date_range.start_date, self.select_date_range.end_date));
+            }
             self.overview_table.show(ctx, frame, ui);
 
             ui.horizontal(|ui| {
                 self.edit.show(ctx, frame, ui);
-                self.export.set_range((self.select_date_range.start_date, self.select_date_range.end_date));
                 self.export.show(ctx, frame, ui);
             });
             

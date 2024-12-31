@@ -38,7 +38,10 @@ impl Exporter for XlsxExporter {
         
         let mut wb = Workbook::new();
         let sheet = wb.add_worksheet();
-        let month = format!("{}-{}", data[0].1.end.year(), data[0].1.start.month());
+        if data.len() == 0 {
+            return Ok(());
+        }
+        let month = format!("{}-{}", data[0].1.date.year(), data[0].1.date.month());
         sheet.set_name(month.clone()).unwrap();
         generate_header(&self.formats, sheet, &user_data);
 
