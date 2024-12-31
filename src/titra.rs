@@ -51,7 +51,7 @@ impl App for Titra {
                 let Some(init_thread) = &mut self.init_thread else {
                     let config_clone = self.config.clone();
                     self.init_thread = Some(spawn(move || {
-                        return init(config_clone);
+                        init(config_clone)
                     }));
                     return;
                 };
@@ -87,8 +87,8 @@ fn init(config: TitraConfig) -> Result<Box<dyn TimeStorage + Send>, DataStorageE
         StorageImplementation::Sqlite => {
             
             match SqliteStorage::new(config.root_dir.clone()) {
-                Ok(res) => return Ok(Box::new(CachedStorage::new(res))),
-                Err(err) => return Err(err),
+                Ok(res) => Ok(Box::new(CachedStorage::new(res))),
+                Err(err) => Err(err),
             }
         }
     }

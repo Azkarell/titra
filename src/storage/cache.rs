@@ -44,7 +44,7 @@ impl SharedQueryResult {
                 return r2.clone();
             } 
         } 
-        return None;
+        None
     }
 }
 
@@ -79,7 +79,7 @@ impl<S: TimeStorage + Clone + Send + 'static> TimeStorage for CachedStorage<S> {
         if let Some(val) = cached {
             return val;
         }
-        return self.do_query(start, end);
+        self.do_query(start, end)
     }
 
     fn dyn_clone(&self) -> Box<dyn TimeStorage + Send> {

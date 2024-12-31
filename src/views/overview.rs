@@ -41,7 +41,7 @@ impl NaiveDateExt for chrono::NaiveDate {
 
     fn is_leap_year(&self) -> bool {
         let year = self.year();
-        return year % 4 == 0 && (year % 100 != 0 || year % 400 == 0);
+        year % 4 == 0 && (year % 100 != 0 || year % 400 == 0)
     }
 }
 

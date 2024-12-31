@@ -67,7 +67,7 @@ impl TitraView for OverviewTable {
                                 ui.label(data.end.time().format("%R").to_string());
                             });
                             row.col(|ui| {
-                                ui.label(data.remark.as_ref().map_or("", |v| &v));
+                                ui.label(data.remark.as_ref().map_or("", |v| v));
                             });
                             row.col(|ui|{
                                 if ui.button("x").clicked() {

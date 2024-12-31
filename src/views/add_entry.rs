@@ -83,7 +83,7 @@ impl AddEntry {
         Ok(TimeEntryData {
             start,
             end,
-            remark: if self.remark.len() > 0 {
+            remark: if !self.remark.is_empty() {
                 Some(self.remark.clone())
             } else {
                 None

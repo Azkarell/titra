@@ -18,6 +18,12 @@ pub struct XlsxExporter{
     formats: HashMap<XlsxFormats, Format>
 }
 
+impl Default for XlsxExporter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl XlsxExporter {
     pub fn new() -> Self {
         Self {  
