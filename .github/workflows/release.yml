@@ -15,7 +15,7 @@ jobs:
     - name: Build
       run: cargo build --verbose --release --target-dir ./out
     
-    - run: gh release upload ${{ github.ref }} ./out/release/timetracker
+    - run: gh release upload ${{ github.ref_name }} ./out/release/timetracker
 
   release-windows:
     name: release windows
@@ -28,4 +28,4 @@ jobs:
     - name: Build
       run: cargo build --verbose --release --target-dir ./out
 
-    - run: gh release upload ${{ github.ref }} ./out/release/timetracker.exe ./out/release/timetracker.pdb
+    - run: gh release upload ${{ github.ref_name }} ./out/release/timetracker.exe ./out/release/timetracker.pdb
