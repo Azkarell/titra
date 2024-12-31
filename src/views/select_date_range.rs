@@ -1,5 +1,4 @@
-use chrono::{DateTime, Datelike, Local, NaiveDate, NaiveTime};
-use egui::Grid;
+use chrono::{DateTime, Datelike, Local, NaiveTime};
 use egui_extras::DatePickerButton;
 
 use crate::TitraView;

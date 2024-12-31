@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 
 use chrono::Local;
-use log::{debug, info};
-use rusqlite::{Connection, Statement, ToSql};
+use log::debug;
+use rusqlite::{Connection, ToSql};
 use fallible_iterator::FallibleIterator;
 
 use super::{DataStorageError, TimeEntry, TimeEntryData, TimeStorage};

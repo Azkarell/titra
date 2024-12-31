@@ -1,22 +1,9 @@
-use std::str::FromStr;
 
-use chrono::{DateTime, Datelike, Local, NaiveDate, NaiveTime, TimeZone, Timelike};
-use egui::{Grid, ScrollArea};
-use egui_extras::{Column, DatePickerButton, TableBuilder};
-use icu::{
-    calendar::Gregorian,
-    datetime::{
-        input::{DateInput, IsoTimeInput},
-        options::length,
-        DateTimeFormatter, DateTimeFormatterOptions,
-    },
-    locid::Locale,
-};
-use log::{info, warn};
-use sys_locale::get_locale;
+use chrono::Datelike;
+use icu::datetime::input::DateInput;
 
 use crate::{
-    storage::{TimeEntryData, TimeStorage}, user::UserData, TitraView
+    storage::TimeStorage, user::UserData, TitraView
 };
 
 use super::{add_entry::AddEntry, export::Export, overview_table::OverviewTable, select_date_range::SelectDateRange};

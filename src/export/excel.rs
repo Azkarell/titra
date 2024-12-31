@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use chrono::Datelike;
 use rust_xlsxwriter::{Color, Format, Workbook, Worksheet};
 
-use crate::user::{self, UserData};
+use crate::user::{UserData};
 
 use super::Exporter;
 

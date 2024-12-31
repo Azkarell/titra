@@ -6,7 +6,7 @@ pub mod export;
 pub mod user;
 
 use dotenv::dotenv;
-use egui::{Button,  IconData, ThemePreference};
+use egui::{IconData, ThemePreference};
 use log::info;
 use titra::*;
 use egui::FontFamily::Proportional;
