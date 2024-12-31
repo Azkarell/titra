@@ -2896,24 +2896,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "timetracker"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "dotenv",
- "eframe",
- "egui",
- "egui_extras",
- "env_logger",
- "fallible-iterator",
- "log",
- "rusqlite",
- "rust_xlsxwriter",
- "serde",
- "thiserror 2.0.9",
-]
-
-[[package]]
 name = "tiny-skia"
 version = "0.11.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2946,6 +2928,24 @@ checksum = "9117f5d4db391c1cf6927e7bea3db74b9a1c1add8f7eda9ffd5364f40f57b82f"
 dependencies = [
  "displaydoc",
  "zerovec",
+]
+
+[[package]]
+name = "titra"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "dotenv",
+ "eframe",
+ "egui",
+ "egui_extras",
+ "env_logger",
+ "fallible-iterator",
+ "log",
+ "rusqlite",
+ "rust_xlsxwriter",
+ "serde",
+ "thiserror 2.0.9",
 ]
 
 [[package]]
