@@ -9,3 +9,4 @@ pub mod add_entry;
 pub mod overview_table;
 pub mod export;
 pub mod time_edit;
+pub mod time_entry_edit;

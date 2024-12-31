@@ -15,16 +15,18 @@ use crate::{
 
 #[derive(Debug, Error)]
 pub enum ApplicationError {
-    #[error("Storage failure: {0}")]
+    #[error("{0}")]
     Storage(DataStorageError),
-    #[error("Export failure: {0}")]
+    #[error("{0}")]
     Export(ExportError),
-    #[error("Chrono error: {0}")]
+    #[error("{0}")]
     ChronoParseError(ParseError),
-    #[error("Chrono timezone error: {0}")]
+    #[error("{0}")]
     ChronoeTimezoneError(String),
-    #[error("Ungülitige start und endzeit")]
+    #[error("Ungülitige Start- und Endzeit")]
     InvalidRange,
+    #[error("Still in edit")]
+    InEdit,
 }
 
 impl From<ParseError> for ApplicationError {

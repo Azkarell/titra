@@ -7,6 +7,7 @@ use crate::views::overview_table::DateRange;
 
 pub mod sqlite;
 pub mod cache;
+pub mod migrate;
 
 #[derive(Serialize, Deserialize, Clone, Copy)]
 pub enum StorageImplementation {
@@ -20,7 +21,26 @@ pub struct TimeEntryData {
     pub start: NaiveTime,
     pub end: NaiveTime,
     pub date: NaiveDate,
-    pub remark: Option<String>
+    pub remark: String
+}
+impl TimeEntryData {
+    pub fn with_start(&self, val: NaiveTime) -> TimeEntryData {
+        Self {
+            date: self.date,
+            end: self.end,
+            remark: self.remark.clone(),
+            start: val
+        }
+    }
+
+    pub fn with_end(&self, val: NaiveTime) -> TimeEntryData {
+        Self {
+            date: self.date,
+            end: val,
+            remark: self.remark.clone(),
+            start: self.start
+        }
+    }
 }
 
 pub type TimeEntry = (TimeEntryId, TimeEntryData);
@@ -34,7 +54,7 @@ pub enum DataStorageError {
 pub trait TimeStorage {
     fn add_entry(&mut self, entry: TimeEntryData) -> Result<TimeEntryId, DataStorageError>;
     fn remove_entry(&mut self, entry_id: TimeEntryId) -> Result<(), DataStorageError>;
-
+    fn update_entry(&mut self, entry_id: TimeEntryId, data: TimeEntryData) -> Result<(), DataStorageError>; 
     fn get_in_range(&self, range: DateRange) -> Result<Vec<TimeEntry>, DataStorageError>;
     fn dyn_clone(&self) -> Box<dyn TimeStorage + Send>;
 }

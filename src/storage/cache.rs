@@ -89,6 +89,12 @@ impl<S: TimeStorage + Clone + Send + 'static> TimeStorage for CachedStorage<S> {
             last_query: self.last_query.clone()
         })
     }
+    
+    fn update_entry(&mut self, entry_id: super::TimeEntryId, data: super::TimeEntryData) -> Result<(), DataStorageError> {
+        self.imp.update_entry(entry_id, data)?;
+        self.last_query.invalidate();
+        Ok(())
+    }
 }
 
 impl<S: TimeStorage> CachedStorage<S> {

@@ -1,4 +1,4 @@
-#![windows_subsystem = "windows"]
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod state;
 mod storage;
@@ -6,6 +6,7 @@ mod titra;
 mod views;
 pub mod export;
 pub mod user;
+pub mod i18n;
 
 use dotenv::dotenv;
 use egui::{IconData, ThemePreference};
@@ -26,7 +27,6 @@ fn main() {
         ..Default::default()
     };
 
-    info!("Test");
 
     let text_styles: BTreeMap<_, _> = [
         (Heading, FontId::new(24.0, Proportional)),
