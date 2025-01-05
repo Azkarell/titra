@@ -1,13 +1,13 @@
-use std::path::PathBuf;
+use std::{collections::HashMap, path::PathBuf};
 
-use chrono::Local;
+use chrono::{Local, NaiveDate, TimeDelta};
 use fallible_iterator::FallibleIterator;
 use log::debug;
 use rusqlite::{Connection, Statement, ToSql};
 
-use crate::{storage::migrate::migrate_db, views::overview_table::DateRange};
+use crate::{model::date_range::DateRange, storage::migrate::migrate_db};
 
-use super::{DataStorageError, TimeEntry, TimeEntryData, TimeStorage};
+use super::{DataStorageError, PlannedHoursStorage, TimeEntry, TimeEntryData, TimeStorage};
 
 impl From<rusqlite::Error> for DataStorageError {
     fn from(value: rusqlite::Error) -> Self {
@@ -59,14 +59,14 @@ impl TimeStorage for SqliteStorage {
 
     fn remove_entry(&mut self, entry_id: super::TimeEntryId) -> Result<(), DataStorageError> {
         debug!("Deleting entry: {}", entry_id);
-        let mut statement = self.connection.prepare("Delete from times where id = ?1")?;
+        let mut statement = self.connection.prepare_cached("Delete from times where id = ?1")?;
         let _res = statement.execute([entry_id])?;
         Ok(())
     }
 
     fn get_in_range(&self, range: DateRange) -> Result<Vec<TimeEntry>, DataStorageError> {
         debug!("query data: {:?}", range);
-        let mut statement = self.connection.prepare("SELECT id, start, end, date, remark from times where date(date) >= ?1
+        let mut statement = self.connection.prepare_cached("SELECT id, start, end, date, remark from times where date(date) >= ?1
                                                                                      and date(date) <= ?2 order by date asc, id asc")?;
         let res = statement.query((range.0.to_sql()?, range.1.to_sql()?))?;
 
@@ -95,7 +95,7 @@ impl TimeStorage for SqliteStorage {
     ) -> Result<(), DataStorageError> {
         debug!("update entry: {entry_id}");
 
-        let mut statement = self.connection.prepare(
+        let mut statement = self.connection.prepare_cached(
             "UPDATE times set start = ?1, end = ?2, date = ?3, remark = ?4 where id = ?5",
         )?;
         statement.execute((
@@ -107,5 +107,36 @@ impl TimeStorage for SqliteStorage {
         ))?;
 
         Ok(())
+    }
+}
+
+impl PlannedHoursStorage for SqliteStorage {
+    fn set(&mut self, date: chrono::NaiveDate, duration: chrono::TimeDelta) -> Result<(), DataStorageError> {
+        let mut statement = self.connection.prepare_cached("Insert or replace into planned_hours (date, hours) values (?1, ?2)")?;
+        statement.execute((date, duration.num_seconds()))?;
+        Ok(())
+    }
+
+    fn get(&self, date: chrono::NaiveDate) -> Result<chrono::TimeDelta, DataStorageError> {
+        let mut statement  = self.connection.prepare_cached("Select hours from planned_hours where date = ?1")?;
+        let res = statement.query_row([date], |r| {
+            let seconds: i64 = r.get(0)?;
+            Ok(TimeDelta::seconds(seconds))
+        })?;
+        Ok(res)
+    }
+
+    fn get_range(&self, range: DateRange) -> Result<HashMap<NaiveDate, chrono::TimeDelta>, DataStorageError> {
+        let mut statement = self.connection.prepare_cached("Seelct date, hours from planned_hours where date >= ?1 and date <= ?2")?;
+        let res = statement.query((range.0, range.1))?;
+        let res = res.map(|r| {
+            let seconds = r.get(1)?;
+            Ok((r.get(0)?, TimeDelta::seconds(seconds)))
+        });
+        Ok(res.collect()?)
+    }
+
+    fn dyn_clone(&self) -> Box<dyn PlannedHoursStorage + Send> {
+        Box::new(self.clone())
     }
 }

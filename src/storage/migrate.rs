@@ -26,4 +26,12 @@ pub fn migrate_db(connection: &mut Connection) {
     if let Err(err) = res {
         debug!("Error: {}", err.to_string());
     }
+
+    let res = connection.execute("CREATE TABLE planned_hours (
+        date        TEXT PRIMARY KEY,
+        hours       TEXT NOT NULL
+        )", ());
+if let Err(err) = res {
+debug!("Error: {}", err.to_string());
+}
 }

@@ -1,7 +1,12 @@
 use chrono::NaiveDate;
+use egui::TextEdit;
 use egui_extras::TableRow;
+use log::info;
 
-use crate::{storage::TimeEntryData, ApplicationError, TitraView};
+use crate::{
+    model::{error::ApplicationError, time_entry::TimeEntryData},
+    Services, StateView, TitraResult, TitraView,
+};
 
 use super::time_edit::TimeEdit;
 
@@ -11,20 +16,10 @@ pub struct TimeEntryEdit {
     end: TimeEdit,
     date: NaiveDate,
     remark: String,
-    is_touched: bool,
-    is_done: bool
 }
 
 impl TimeEntryEdit {
     pub fn validate(&mut self) -> Result<TimeEntryData, ApplicationError> {
-        
-        if self.start.is_touched() {
-            self.is_touched = true;
-        }
-        if self.end.is_touched() {
-            self.is_touched = true;
-        }
-
         let start = self.start.validate()?;
         let end = self.end.validate()?;
         if start >= end {
@@ -37,51 +32,6 @@ impl TimeEntryEdit {
             remark: self.remark.clone(),
         })
     }
-    
-    fn mark_touched(&mut self) {
-        self.is_touched = true;
-    }
-    pub fn is_touched(&self) -> bool {
-        self.is_touched
-    }
-
-    pub fn draw(&mut self, row: &mut TableRow, ctx: &egui::Context, frame: &mut eframe::Frame) -> Result<TimeEntryData, ApplicationError> {
-        self.is_done = true;
-        row.col(|ui| {
-            ui.label(self.date.format("%x").to_string());
-        });
-        row.col(|ui| {
-            ui.set_max_width(90.0);
-            self.start.show(ctx, frame, ui);
-            if !self.start.is_done() {
-                self.is_done = false;
-            }
-        });
-        row.col(|ui| {
-            ui.set_max_width(90.0);
-            self.end.show(ctx, frame, ui);
-            if !self.end.is_done() {
-                self.is_done = false;
-            }
-        });
-        row.col(|ui| {
-            let response = ui.text_edit_singleline(&mut self.remark);
-            if response.changed() {
-                self.mark_touched();
-            }
-            if response.has_focus() {
-                self.is_done = false;
-            }
-        });
-        let res = self.validate();
-        if self.is_done && self.is_touched {
-            return res;
-        } else {
-            return Err(ApplicationError::InEdit);
-        }
-      
-
-    }
 }
 
 impl From<TimeEntryData> for TimeEntryEdit {
@@ -91,9 +41,45 @@ impl From<TimeEntryData> for TimeEntryEdit {
             end: TimeEdit::new_with_value(value.end, None),
             remark: value.remark,
             start: TimeEdit::new_with_value(value.start, None),
-            is_touched: false,
-            is_done: true
         }
     }
 }
 
+impl StateView<TimeEntryData, ApplicationError> for TimeEntryEdit {
+    fn show(&mut self, ui: &mut egui::Ui) -> TitraResult<TimeEntryData, ApplicationError> {
+        let change1 = match StateView::show(&mut self.start, ui) {
+            TitraResult::InEdit => TitraResult::InEdit,
+            TitraResult::Done(_) => match self.validate() {
+                Ok(d) => TitraResult::Done(d),
+                Err(e) => TitraResult::Error(e),
+            },
+            TitraResult::Error(e) => TitraResult::Error(e),
+            TitraResult::NoChange => TitraResult::NoChange,
+        };
+
+        let change2 = match StateView::show(&mut self.end, ui) {
+            TitraResult::InEdit => TitraResult::InEdit,
+            TitraResult::Done(_) => match self.validate() {
+                Ok(d) => TitraResult::Done(d),
+                Err(e) => TitraResult::Error(e),
+            },
+            TitraResult::Error(e) => TitraResult::Error(e),
+            TitraResult::NoChange => TitraResult::NoChange,
+        };
+
+        let response = ui.add_sized( (240.0, 30.0) ,TextEdit::singleline(&mut self.remark).desired_width(200.0));
+        let change3 = if response.has_focus() {
+            TitraResult::InEdit
+        } else if response.lost_focus() {
+            match self.validate() {
+                Ok(d) => TitraResult::Done(d),
+                Err(e) => TitraResult::Error(e),
+            }
+        } else {
+            TitraResult::NoChange
+        };
+        let res = change1.combine_with(change2).combine_with(change3);
+
+        res
+    }
+}

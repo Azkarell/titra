@@ -7,10 +7,11 @@ mod views;
 pub mod export;
 pub mod user;
 pub mod i18n;
+pub mod extensions;
+pub mod model;
 
 use dotenv::dotenv;
 use egui::{IconData, ThemePreference};
-use log::info;
 use titra::*;
 use egui::FontFamily::Proportional;
 use egui::FontId;

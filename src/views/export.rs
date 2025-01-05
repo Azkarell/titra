@@ -1,16 +1,11 @@
 use std::thread::{spawn, JoinHandle};
 
-use chrono::{DateTime, Local};
 use egui::{Button, ComboBox};
 
 use crate::{
-    export::{excel::XlsxExporter, Exporter},
-    storage::{DataStorageError, TimeStorage},
-    user::UserData,
-    TitraView,
+    export::{excel::XlsxExporter, Exporter}, model::{date_range::DateRange, error::ApplicationError}, storage::error::DataStorageError, user::UserData, Services, TitraResult, TitraView
 };
 
-use super::overview_table::DateRange;
 
 #[derive(Debug, PartialEq, PartialOrd)]
 pub enum ExportFormat {
@@ -35,7 +30,6 @@ impl ExportFormat {
 }
 
 pub struct Export {
-    storage: Box<dyn TimeStorage + Send>,
     export_format: ExportFormat,
     range: DateRange,
     user_data: UserData,
@@ -44,12 +38,10 @@ pub struct Export {
 
 impl Export {
     pub fn new(
-        storage: Box<dyn TimeStorage + Send>,
         range: DateRange,
         user_data: UserData,
     ) -> Self {
         Self {
-            storage,
             export_format: ExportFormat::Xlsx,
             range,
             user_data,
@@ -61,8 +53,8 @@ impl Export {
         self.range = range;
     }
 
-    pub fn export(&mut self) -> Result<(), DataStorageError> {
-        let clone = self.storage.clone();
+    pub fn export(&mut self, services: &mut Services) -> Result<(), DataStorageError> {
+        let clone = services.time_service.clone();
         let user_data = self.user_data.clone();
         let exporter = self.export_format.get_exporter();
         let range = (self.range.0, self.range.1);
@@ -88,8 +80,8 @@ impl Export {
     }
 }
 
-impl TitraView for Export {
-    fn show(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame, ui: &mut egui::Ui) {
+impl TitraView<(), ApplicationError, Services> for Export {
+    fn show(&mut self, ui: &mut egui::Ui, services: &mut Services) -> TitraResult<(), ApplicationError> {
         ui.group(|ui| {
             ui.vertical(|ui| {
                 ComboBox::from_label("ExportFormat")
@@ -104,9 +96,10 @@ impl TitraView for Export {
                     ui.add_enabled(false, button);
                     self.check_finished();
                 } else if ui.add(button).clicked() {
-                    self.export().unwrap();
+                    self.export(services).unwrap();
                 }
             });
         });
+        TitraResult::NoChange
     }
 }

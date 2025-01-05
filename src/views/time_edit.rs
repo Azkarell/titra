@@ -1,20 +1,19 @@
-
 use chrono::NaiveTime;
-use egui::{Align, Color32, Layout, RichText, TextEdit};
+use egui::{Align, Color32, Id, Layout, RichText, TextEdit};
 use log::info;
 
-use crate::{ApplicationError, TitraView};
-
-
+use crate::{ model::error::ApplicationError, Services, StateView, TitraResult, TitraView};
 
 #[derive(Clone, Debug)]
 pub struct TimeEdit {
     time: NaiveTime,
     repr: String,
     label: Option<String>,
-    is_touched: bool,
-    is_done: bool,
 }
+
+
+
+
 
 impl TimeEdit {
     pub fn new(label: Option<String>) -> Self {
@@ -24,10 +23,12 @@ impl TimeEdit {
 
     pub fn new_with_value(time: NaiveTime, label: Option<String>) -> Self {
         let repr = time.format("%R").to_string();
-        Self { time, repr, label, is_touched: false, is_done: false}
-
+        Self {
+            time,
+            repr,
+            label,
+        }
     }
-
 
     pub fn get_value(&self) -> NaiveTime {
         self.time
@@ -39,31 +40,36 @@ impl TimeEdit {
     }
 
 
-    pub fn is_touched(&self) -> bool {
-        self.is_touched
-    }
-    pub fn is_done(&self) -> bool {
-        self.is_done
-    }
-
 }
 
-
-
-
-
-impl TitraView for TimeEdit {
-    fn show(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame, ui: &mut egui::Ui) {
-        if let Some(l) = &self.label {
-           ui.label(l); 
-        }
-            let response = ui.add(TextEdit::singleline(&mut self.repr).desired_width(90.0).horizontal_align(Align::RIGHT));
-            if response.changed() {
-                self.is_touched = true;
-            } else {
-                self.is_touched = false;
+impl StateView<NaiveTime, ApplicationError> for TimeEdit {
+    fn show(
+        &mut self,
+        ui: &mut egui::Ui,
+    ) -> TitraResult<NaiveTime, ApplicationError> {
+            if let Some(l) = &self.label {
+                ui.label(l);
             }
-            self.is_done = !response.has_focus();
-      
+           
+            let response = ui.add(
+                TextEdit::singleline(&mut self.repr)
+                    .desired_width(120.0)
+                    .horizontal_align(Align::RIGHT),
+            );
+            if response.has_focus() {
+                info!("here: {}", self.repr);
+                TitraResult::InEdit
+            } else if response.lost_focus() {
+                match self.validate() {
+                    Ok(v) => {
+                        self.time = v;
+                        info!("done");
+                        TitraResult::Done(v)
+                    },
+                    Err(e) => TitraResult::Error(e),
+                }
+            } else {
+                TitraResult::NoChange
+            }
     }
 }

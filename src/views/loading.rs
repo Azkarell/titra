@@ -1,5 +1,5 @@
 
-use crate::TitraView;
+use crate::{Services, StaticView, TitraView};
 
 pub struct Loading {
     ctx: LoadingContext,
@@ -17,8 +17,8 @@ pub struct LoadingContext {
     is_done: bool,
 }
 
-impl TitraView for Loading {
-    fn show(&mut self, _ctx: &egui::Context, _frame: &mut eframe::Frame, ui: &mut egui::Ui) {
+impl StaticView for Loading {
+    fn show(&mut self, ui: &mut egui::Ui) {
         if !self.ctx.is_done {
             ui.horizontal_centered(|ui|{
                 ui.spinner();

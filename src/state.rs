@@ -1,9 +1,9 @@
-use crate::views::overview::{Overview};
+use crate::{views::overview::Overview, Services};
 
 
 
 pub enum AppState {
     Init,
-    Overview(Overview),
+    Loaded(Overview, Services),
     Failed(String)
 }

@@ -3,40 +3,105 @@ use std::{
     thread::{spawn, JoinHandle},
 };
 
-use chrono::ParseError;
 use eframe::App;
-use egui::{ Ui};
+use egui::{Ui};
 use serde::{Deserialize, Serialize};
-use thiserror::Error;
 
 use crate::{
-    export::ExportError, state::AppState, storage::{cache::CachedStorage, sqlite::SqliteStorage, DataStorageError, StorageImplementation, TimeStorage}, views::{overview::Overview, scaffold::Scaffold}
+    model::{date_range::DateRange, error::ApplicationError, time_entry::{TimeEntry, TimeEntryData, TimeEntryId}}, state::AppState, storage::{cache::CachedStorage, error::DataStorageError, null::NullService, sqlite::SqliteStorage, PlannedHoursStorage, StorageImplementation, TimeStorage}, views::{overview::Overview, scaffold::Scaffold}
 };
 
-#[derive(Debug, Error)]
-pub enum ApplicationError {
-    #[error("{0}")]
-    Storage(DataStorageError),
-    #[error("{0}")]
-    Export(ExportError),
-    #[error("{0}")]
-    ChronoParseError(ParseError),
-    #[error("{0}")]
-    ChronoeTimezoneError(String),
-    #[error("Ungülitige Start- und Endzeit")]
-    InvalidRange,
-    #[error("Still in edit")]
-    InEdit,
+
+#[derive(Clone)]
+pub struct Services {
+    pub time_service: Box<dyn TimeStorage + Send>,
+    pub hour_service: Box<dyn PlannedHoursStorage + Send>,
 }
 
-impl From<ParseError> for ApplicationError {
-    fn from(value: ParseError) -> Self {
-        ApplicationError::ChronoParseError(value)
+impl Services {
+    pub fn new(time_service: Box<dyn TimeStorage + Send>, hour_service: Box<dyn PlannedHoursStorage + Send>) -> Self {
+        Self { time_service, hour_service }
+    }
+    
+    pub(crate) fn empty() -> Self {
+        Self {
+            time_service: Box::new(NullService),
+            hour_service: Box::new(NullService)
+        }
+    }
+    
+}
+
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum TitraResult<T,E> {
+    InEdit,
+    Done(T),
+    Error(E),
+    NoChange
+}
+
+impl<T,E> TitraResult<T,E> {
+    pub fn map_err<U, O: FnOnce(E) -> U>(self, f: O) -> TitraResult<T, U> {
+        match self {
+            TitraResult::InEdit => TitraResult::InEdit,
+            TitraResult::Done(d) => TitraResult::Done(d),
+            TitraResult::Error(e) => TitraResult::Error(f(e)),
+            TitraResult::NoChange => TitraResult::NoChange,
+        }
+    }
+
+    pub fn then<U, O: FnOnce(T) -> U>(self, f: O)-> TitraResult<U, E> {
+        match self {
+            TitraResult::InEdit => TitraResult::InEdit,
+            TitraResult::Done(d) => TitraResult::Done(f(d)),
+            TitraResult::Error(e) => TitraResult::Error(e),
+            TitraResult::NoChange   => TitraResult::NoChange
+        }
+    }
+
+
+    pub fn combine_with(self, other: TitraResult<T,E>) -> TitraResult<T,E> {
+        match (self, other) {
+            (TitraResult::InEdit, _) => TitraResult::InEdit,
+            (_, TitraResult::InEdit) => TitraResult::InEdit,
+            (TitraResult::Error(e), _) => TitraResult::Error(e),
+            (_, TitraResult::Error(e)) => TitraResult::Error(e),
+            (TitraResult::Done(d), _) => TitraResult::Done(d),
+            (_, TitraResult::Done(d)) => TitraResult::Done(d),
+            (TitraResult::NoChange, TitraResult::NoChange) => TitraResult::NoChange
+        }
     }
 }
-pub trait TitraView {
-    fn show(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame, ui: &mut Ui);
+
+pub trait TitraView<T, E, S> {
+    fn show(&mut self, ui: &mut Ui, services: &mut S) -> TitraResult<T,E>;
 }
+
+pub trait StaticView {
+    fn show(&mut self, ui: &mut Ui);
+}
+
+impl<S: StaticView, E> StateView<(), E> for S {
+    fn show(&mut self, ui: &mut Ui) -> TitraResult<(),E> {
+        self.show(ui);
+        TitraResult::Done(())
+    }
+}
+
+
+
+pub trait StateView<T, E>{
+    fn show(&mut self, ui: &mut Ui) -> TitraResult<T,E>;
+}
+
+impl<V: StateView<T,E>, T, E, S> TitraView<T,E,S> for V {
+    fn show(&mut self, ui: &mut Ui, _: &mut S) -> TitraResult<T,E> {
+        self.show(ui)
+    }
+}
+
+
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct TitraConfig {
@@ -48,7 +113,7 @@ pub struct Titra {
     config: TitraConfig,
     state: AppState,
     threads: Vec<JoinHandle<()>>,
-    init_thread: Option<JoinHandle<Result<Box<dyn TimeStorage + Send>, DataStorageError>>>,
+    init_thread: Option<JoinHandle<Result<Services, DataStorageError>>>,
 }
 
 impl Titra {
@@ -66,7 +131,6 @@ impl App for Titra {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
 
         let mut scaffold = Scaffold::new(ctx, frame);
-
         match &mut self.state {
             AppState::Init => {
                 let Some(init_thread) = &mut self.init_thread else {
@@ -85,7 +149,7 @@ impl App for Titra {
                     };
                     match join_res {
                         Ok(res) => {
-                            self.state = AppState::Overview(Overview::new(res))
+                            self.state = AppState::Loaded(Overview::new(), res)
                         }
                         Err(err) => {
                             self.state = AppState::Failed(err.to_string())
@@ -97,20 +161,19 @@ impl App for Titra {
                 }
                
             }
-            AppState::Overview(view) => scaffold.render(view),
+            AppState::Loaded(view, services) => scaffold.render(view, services),
             AppState::Failed(message) => scaffold.failed(message.clone()),
         }
     }
 }
 
-fn init(config: TitraConfig) -> Result<Box<dyn TimeStorage + Send>, DataStorageError>{
+fn init(config: TitraConfig) -> Result<Services, DataStorageError>{
     match config.storage_impl {
         StorageImplementation::Sqlite => {
-            
-            match SqliteStorage::new(config.root_dir.clone()) {
-                Ok(res) => Ok(Box::new(CachedStorage::new(res))),
-                Err(err) => Err(err),
-            }
+            let sqlite = SqliteStorage::new(config.root_dir.clone())?;
+            let time_service: Box<dyn TimeStorage + Send> = Box::new(CachedStorage::new_time(sqlite.clone()));
+            let hour_service: Box<dyn PlannedHoursStorage + Send> = Box::new(CachedStorage::new_hours(sqlite));
+            Ok(Services::new(time_service, hour_service))
         }
     }
 

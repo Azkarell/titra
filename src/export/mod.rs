@@ -1,11 +1,11 @@
 use thiserror::Error;
 
-use crate::{storage::TimeEntry, user::UserData};
+use crate::{model::time_entry::TimeEntry, user::UserData};
 
 pub mod excel;
 
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq, Eq)]
 pub enum ExportError {
     #[error("Could not export data: {0}")]
     Unknown(String)

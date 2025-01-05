@@ -1,4 +1,4 @@
-use crate::TitraView;
+use crate::{Services, StaticView, TitraView};
 
 pub struct Failed {
     message: String
@@ -12,8 +12,8 @@ impl Failed{
     }
 }
 
-impl TitraView for Failed {
-    fn show(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame, ui: &mut egui::Ui) {
+impl StaticView for Failed {
+    fn show(&mut self,  ui: &mut egui::Ui) {
         ui.vertical_centered_justified(|ui|{
             ui.heading(&self.message)
         });

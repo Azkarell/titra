@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use chrono::Datelike;
 use rust_xlsxwriter::{Color, Format, Workbook, Worksheet};
 
-use crate::user::{UserData};
+use crate::{model::time_entry::TimeEntry, user::UserData};
 
 use super::Exporter;
 
@@ -34,7 +34,7 @@ impl XlsxExporter {
 }
 
 impl Exporter for XlsxExporter {
-    fn export(&self, data: Vec<crate::storage::TimeEntry>, user_data: UserData) -> Result<(), super::ExportError> {
+    fn export(&self, data: Vec<TimeEntry>, user_data: UserData) -> Result<(), super::ExportError> {
         
         let mut wb = Workbook::new();
         let sheet = wb.add_worksheet();

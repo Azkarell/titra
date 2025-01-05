@@ -1,19 +1,19 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
-use chrono::{DateTime, Local};
+use chrono::{DateTime, Local, NaiveDate, TimeDelta};
 use egui::mutex::RwLock;
 
-use crate::views::overview_table::DateRange;
+use crate::model::{date_range::DateRange, time_entry::{TimeEntryData, TimeEntryId}};
 
-use super::{DataStorageError, TimeEntry, TimeStorage};
+use super::{DataStorageError, PlannedHoursStorage, TimeEntry, TimeStorage};
 
 #[derive(Clone)]
-pub struct SharedQueryResult {
+pub struct SharedQueryResult<T> {
     last_query: Arc<RwLock<Option<DateRange>>>,
-    last_result: Arc<RwLock<Option<Result<Vec<TimeEntry>, DataStorageError>>>>,
+    last_result: Arc<RwLock<Option<Result<T, DataStorageError>>>>,
 }
 
-impl SharedQueryResult {
+impl<T: Clone> SharedQueryResult<T> {
     pub fn new() -> Self {
         Self {
             last_query: Arc::new(RwLock::new(None)),
@@ -27,7 +27,7 @@ impl SharedQueryResult {
     pub fn set_result(
         &self,
         query: DateRange,
-        result: Result<Vec<TimeEntry>, DataStorageError>,
+        result: Result<T, DataStorageError>,
     ) {
         let mut g = self.last_query.write();
         *g = Some(query);
@@ -38,7 +38,7 @@ impl SharedQueryResult {
     pub fn get_cached(
         &self,
         query: DateRange,
-    ) -> Option<Result<Vec<TimeEntry>, DataStorageError>> {
+    ) -> Option<Result<T, DataStorageError>> {
         let r = self.last_query.read();
         if let Some((start, end)) = *r {
             if start == query.0 && end == query.1 {
@@ -50,12 +50,13 @@ impl SharedQueryResult {
     }
 }
 
-pub struct CachedStorage<S: TimeStorage> {
+
+pub struct CachedStorage<S, T> {
     imp: S,
-    last_query: SharedQueryResult,
+    last_query: SharedQueryResult<T>,
 }
 
-impl<S: TimeStorage + Clone + Send + 'static> TimeStorage for CachedStorage<S> {
+impl<S: TimeStorage + Clone + Send + 'static> TimeStorage for CachedStorage<S, Vec<TimeEntry>> {
     fn add_entry(
         &mut self,
         entry: super::TimeEntryData,
@@ -75,7 +76,7 @@ impl<S: TimeStorage + Clone + Send + 'static> TimeStorage for CachedStorage<S> {
     fn get_in_range(
         &self,
         range: DateRange
-    ) -> Result<Vec<super::TimeEntry>, super::DataStorageError> {
+    ) -> Result<Vec<TimeEntry>, super::DataStorageError> {
         let cached = self.last_query.get_cached(range);
         if let Some(val) = cached {
             return val;
@@ -90,15 +91,15 @@ impl<S: TimeStorage + Clone + Send + 'static> TimeStorage for CachedStorage<S> {
         })
     }
     
-    fn update_entry(&mut self, entry_id: super::TimeEntryId, data: super::TimeEntryData) -> Result<(), DataStorageError> {
+    fn update_entry(&mut self, entry_id: TimeEntryId, data: TimeEntryData) -> Result<(), DataStorageError> {
         self.imp.update_entry(entry_id, data)?;
         self.last_query.invalidate();
         Ok(())
     }
 }
 
-impl<S: TimeStorage> CachedStorage<S> {
-    pub fn new(imp: S) -> Self {
+impl<S: TimeStorage> CachedStorage<S, Vec<TimeEntry>> {
+    pub fn new_time(imp: S) -> Self {
         Self {
             imp,
             last_query: SharedQueryResult::new()
@@ -108,9 +109,54 @@ impl<S: TimeStorage> CachedStorage<S> {
     pub fn do_query(
         &self,
         range: DateRange
-    ) -> Result<Vec<super::TimeEntry>, super::DataStorageError> {
+    ) -> Result<Vec<TimeEntry>, super::DataStorageError> {
         let res = self.imp.get_in_range(range)?;
         self.last_query.set_result(range ,Ok(res.clone()));
         Ok(res)
+    }
+}
+
+impl<S: PlannedHoursStorage> CachedStorage<S, HashMap<NaiveDate,TimeDelta>> {
+    pub fn new_hours(imp: S) -> Self {
+        Self {
+            imp,
+            last_query: SharedQueryResult::new()
+        }
+    }
+
+    pub fn do_query(
+        &self,
+        range: DateRange
+    ) -> Result<HashMap<NaiveDate,super::TimeDelta>, super::DataStorageError> {
+        let res = self.imp.get_range(range)?;
+        self.last_query.set_result(range ,Ok(res.clone()));
+        Ok(res)
+    }
+}
+
+
+impl<S: PlannedHoursStorage + Clone + Send + 'static> PlannedHoursStorage for CachedStorage<S, HashMap<NaiveDate,TimeDelta>> {
+    fn set(&mut self, date: chrono::NaiveDate, duration: TimeDelta) -> Result<(), DataStorageError> {
+        self.last_query.invalidate();
+        self.imp.set(date, duration)
+    }
+
+    fn get(&self, date: chrono::NaiveDate) -> Result<TimeDelta, DataStorageError> {
+        self.imp.get(date)
+    }
+
+    fn get_range(&self, range: DateRange) -> Result<HashMap<NaiveDate,TimeDelta>, DataStorageError> {
+        let cached = self.last_query.get_cached(range);
+        if let Some(val) = cached {
+            return val;
+        }
+        self.do_query(range)
+    }
+
+    fn dyn_clone(&self) -> Box<dyn PlannedHoursStorage + Send> {
+        Box::new(Self{
+            imp: self.imp.clone(),
+            last_query: self.last_query.clone()
+        })
     }
 }
